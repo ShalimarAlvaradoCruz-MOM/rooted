@@ -11,7 +11,7 @@ const REPLAY_INTERVAL_MS = 30000
 function FallingLeaf({ text, prompt, id, onDone }) {
   const leafRef = useRef(null)
   const promptCurveId = `curve_${id}`
-  const promptPath = `M 11,184 Q 86,36 292,81`
+  const promptPath = `M 75,170 Q 160,0 345,80`
 
  useEffect(() => {
   const el = leafRef.current
@@ -106,7 +106,7 @@ function FallingLeaf({ text, prompt, id, onDone }) {
           fill="#603913"
           fontFamily="Sarabun, Georgia, serif"
           fontWeight="700"
-          fontSize="24"
+          fontSize="28"
         >
           <textPath
             href={`#${promptCurveId}`}
