@@ -13,92 +13,74 @@ function FallingLeaf({ text, prompt, id, onDone }) {
   const promptCurveId = `curve_${id}`
   const promptPath = `M 11,184 Q 86,36 292,81`
 
-  useEffect(() => {
-    const el = leafRef.current
-    if (!el) return
+ useEffect(() => {
+  const el = leafRef.current
+  if (!el) return
 
-    const vW = window.innerWidth
-    const vH = window.innerHeight
+  const vW = window.innerWidth
+  const vH = window.innerHeight
+  const startX = 40 + Math.random() * (vW - LEAF_W - 80)
+  const swayAmount = 40 + Math.random() * 60
+  const swayDuration = 5 + Math.random() * 4
+  const startRotation = -10 + Math.random() * 20
+  const endRotation = -20 + Math.random() * 40
 
-    // Random horizontal start, keep leaf fully on screen
-    const startX = 40 + Math.random() * (vW - LEAF_W - 80)
+  gsap.set(el, {
+    x: startX,
+    y: -LEAF_H - 20,
+    opacity: 0,
+    rotation: startRotation,
+  })
 
-    // Sway values
-    const swayAmount = 35 + Math.random() * 50
-    const swayDuration = 5 + Math.random() * 4
+  const tl = gsap.timeline()
 
-    // Start slightly tilted, land nearly flat
-    const startRotation = -15 + Math.random() * 30
-    // Final resting rotation — nearly flat, slight tilt so pile looks natural
-    const restRotation = -8 + Math.random() * 16
+  // Fade in
+  tl.to(el, {
+    opacity: 1,
+    duration: 2,
+    ease: 'power1.in',
+  })
 
-    // Where the leaf comes to rest — bottom of screen, slightly overlapping edge
-    const restY = vH - LEAF_H * 0.28
+  // Slow descent — falls all the way off the bottom
+  tl.to(el, {
+    y: vH + LEAF_H + 20,
+    duration: 30 + Math.random() * 8,
+    ease: 'none',
+  }, 0)
 
-    // Fall duration — slow
-    const fallDuration = 28 + Math.random() * 10
+  // Horizontal sway
+  tl.to(el, {
+    x: startX + swayAmount,
+    duration: swayDuration,
+    repeat: -1,
+    yoyo: true,
+    ease: 'sine.inOut',
+  }, 0)
 
-    gsap.set(el, {
-      x: startX,
-      y: -LEAF_H - 20,
+  // Rotation sway — up to ±20deg, independent timing
+  tl.to(el, {
+    rotation: endRotation,
+    duration: swayDuration * 0.7,
+    repeat: -1,
+    yoyo: true,
+    ease: 'sine.inOut',
+    delay: Math.random() * 2,
+  }, 0)
+
+  const lingerTimer = setTimeout(() => {
+    gsap.to(el, {
       opacity: 0,
-      rotation: startRotation,
-      scaleX: 1,
-      scaleY: 0.22,        // starts nearly edge-on (thin)
-      transformOrigin: 'center center',
+      duration: 2.5,
+      ease: 'power1.inOut',
+      onComplete: () => onDone(id),
     })
+  }, LEAF_LINGER_MS)
 
-    const tl = gsap.timeline()
-
-    // Fade in as it enters
-    tl.to(el, { opacity: 1, duration: 1.8, ease: 'power1.in' })
-
-    // Fall to rest position
-    tl.to(el, {
-      y: restY,
-      duration: fallDuration,
-      ease: 'power1.in',
-    }, 0)
-
-    // As it falls — gradually flatten out (scaleY 0.22 → 0.18 → lands flat)
-    tl.to(el, {
-      scaleY: 0.18,
-      duration: fallDuration * 0.7,
-      ease: 'sine.inOut',
-    }, 0)
-
-    // Final landing — snap flat
-    tl.to(el, {
-      scaleY: 0.14,
-      rotation: restRotation,
-      duration: fallDuration * 0.3,
-      ease: 'power2.out',
-    }, fallDuration * 0.7)
-
-    // Horizontal sway while falling
-    tl.to(el, {
-      x: startX + swayAmount,
-      duration: swayDuration,
-      repeat: Math.floor(fallDuration / swayDuration),
-      yoyo: true,
-      ease: 'sine.inOut',
-    }, 0)
-
-    // After linger time, fade out
-    const lingerTimer = setTimeout(() => {
-      gsap.to(el, {
-        opacity: 0,
-        duration: 2.5,
-        ease: 'power1.inOut',
-        onComplete: () => onDone(id),
-      })
-    }, LEAF_LINGER_MS)
-
-    return () => {
-      clearTimeout(lingerTimer)
-      tl.kill()
-    }
-  }, [])
+  return () => {
+    clearTimeout(lingerTimer)
+    tl.kill()
+  }
+}, [])
 
   return (
     <div
@@ -485,7 +467,7 @@ export default function DisplayPage() {
   return (
     <main
       className="relative w-screen h-screen overflow-hidden"
-      style={{ backgroundColor: '#D2B958' }}
+      style={{ backgroundColor: '#ffffff' }}
     >
       {/* Secret tap zone */}
       <div
