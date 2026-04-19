@@ -4,13 +4,14 @@ import gsap from 'gsap'
 const LEAF_LINGER_MS = 5 * 60 * 1000
 const LEAF_W = 488
 const LEAF_H = 334
-const STAGGER_MS = 12000       // minimum gap between leaf spawns
-const REPLAY_INTERVAL_MS = 30000 // how often completed entries re-queue
+const STAGGER_MS = 12000
+const REPLAY_INTERVAL_MS = 30000
 
+// ── Falling Leaf ──────────────────────────────────────────────────────────────
 function FallingLeaf({ text, prompt, id, onDone }) {
   const leafRef = useRef(null)
   const promptCurveId = `curve_${id}`
-  const promptPath = `M 80,160 Q 157,0 345,81`
+  const promptPath = `M 11,184 Q 86,36 292,81`
 
   useEffect(() => {
     const el = leafRef.current
@@ -18,26 +19,72 @@ function FallingLeaf({ text, prompt, id, onDone }) {
 
     const vW = window.innerWidth
     const vH = window.innerHeight
-    const startX = Math.random() * (vW - LEAF_W)
-    const swayAmount = 40 + Math.random() * 60
+
+    // Random horizontal start, keep leaf fully on screen
+    const startX = 40 + Math.random() * (vW - LEAF_W - 80)
+
+    // Sway values
+    const swayAmount = 35 + Math.random() * 50
     const swayDuration = 5 + Math.random() * 4
-    const startRotation = -10 + Math.random() * 20
-    const endRotation = -20 + Math.random() * 40
+
+    // Start slightly tilted, land nearly flat
+    const startRotation = -15 + Math.random() * 30
+    // Final resting rotation — nearly flat, slight tilt so pile looks natural
+    const restRotation = -8 + Math.random() * 16
+
+    // Where the leaf comes to rest — bottom of screen, slightly overlapping edge
+    const restY = vH - LEAF_H * 0.28
+
+    // Fall duration — slow
+    const fallDuration = 28 + Math.random() * 10
 
     gsap.set(el, {
       x: startX,
       y: -LEAF_H - 20,
       opacity: 0,
       rotation: startRotation,
+      scaleX: 1,
+      scaleY: 0.22,        // starts nearly edge-on (thin)
+      transformOrigin: 'center center',
     })
 
     const tl = gsap.timeline()
 
-    tl.to(el, { opacity: 1, duration: 2, ease: 'power1.in' })
-    tl.to(el, { y: vH + LEAF_H + 20, duration: 30 + Math.random() * 8, ease: 'none' }, 0)
-    tl.to(el, { x: startX + swayAmount, duration: swayDuration, repeat: -1, yoyo: true, ease: 'sine.inOut' }, 0)
-    tl.to(el, { rotation: endRotation, duration: swayDuration * 0.7, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: Math.random() * 2 }, 0)
+    // Fade in as it enters
+    tl.to(el, { opacity: 1, duration: 1.8, ease: 'power1.in' })
 
+    // Fall to rest position
+    tl.to(el, {
+      y: restY,
+      duration: fallDuration,
+      ease: 'power1.in',
+    }, 0)
+
+    // As it falls — gradually flatten out (scaleY 0.22 → 0.18 → lands flat)
+    tl.to(el, {
+      scaleY: 0.18,
+      duration: fallDuration * 0.7,
+      ease: 'sine.inOut',
+    }, 0)
+
+    // Final landing — snap flat
+    tl.to(el, {
+      scaleY: 0.14,
+      rotation: restRotation,
+      duration: fallDuration * 0.3,
+      ease: 'power2.out',
+    }, fallDuration * 0.7)
+
+    // Horizontal sway while falling
+    tl.to(el, {
+      x: startX + swayAmount,
+      duration: swayDuration,
+      repeat: Math.floor(fallDuration / swayDuration),
+      yoyo: true,
+      ease: 'sine.inOut',
+    }, 0)
+
+    // After linger time, fade out
     const lingerTimer = setTimeout(() => {
       gsap.to(el, {
         opacity: 0,
@@ -67,9 +114,24 @@ function FallingLeaf({ text, prompt, id, onDone }) {
         <defs>
           <path id={promptCurveId} d={promptPath} fill="none" stroke="none" />
         </defs>
-        <image href="/img/leaf.png" x="0" y="0" width={LEAF_W} height={LEAF_H} preserveAspectRatio="xMidYMid meet" />
-        <text fill="#603913" fontFamily="Sarabun, Georgia, serif" fontWeight="700" fontSize="28">
-          <textPath href={`#${promptCurveId}`} startOffset="0%" textLength="308" lengthAdjust="spacing">
+        <image
+          href="/img/leaf.png"
+          x="0" y="0"
+          width={LEAF_W} height={LEAF_H}
+          preserveAspectRatio="xMidYMid meet"
+        />
+        <text
+          fill="#603913"
+          fontFamily="Sarabun, Georgia, serif"
+          fontWeight="700"
+          fontSize="24"
+        >
+          <textPath
+            href={`#${promptCurveId}`}
+            startOffset="2%"
+            textLength="308"
+            lengthAdjust="spacing"
+          >
             {prompt}
           </textPath>
         </text>
@@ -89,17 +151,19 @@ function FallingLeaf({ text, prompt, id, onDone }) {
   )
 }
 
-// ── Operator panel ────────────────────────────────────────────────────────────
+// ── Operator Panel ────────────────────────────────────────────────────────────
 function OperatorPanel({ onClose }) {
   const [entries, setEntries] = useState([])
   const [played, setPlayed] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [toast, setToast] = useState('')
 
-  function refresh() {
+  async function refresh() {
     try {
-      const q = JSON.parse(localStorage.getItem('rooted_queue') || '[]')
-      const p = JSON.parse(localStorage.getItem('rooted_played') || '[]')
-      setEntries(q)
-      setPlayed(p)
+      const res = await fetch('/api/queue')
+      const data = await res.json()
+      setEntries(data.pending || [])
+      setPlayed(data.played || [])
     } catch (e) {}
   }
 
@@ -109,111 +173,209 @@ function OperatorPanel({ onClose }) {
     return () => clearInterval(t)
   }, [])
 
-  function clearQueue() {
-    localStorage.setItem('rooted_queue', JSON.stringify([]))
-    refresh()
+  async function doDelete(target, label) {
+    setLoading(true)
+    await fetch('/api/queue', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ target }),
+    })
+    await refresh()
+    setLoading(false)
+    showToast(`${label} cleared`)
   }
 
-  function clearPlayed() {
-    localStorage.setItem('rooted_played', JSON.stringify([]))
-    refresh()
-  }
-
-  function clearAll() {
-    localStorage.setItem('rooted_queue', JSON.stringify([]))
-    localStorage.setItem('rooted_played', JSON.stringify([]))
-    refresh()
-  }
-
-  const rowStyle = {
-    display: 'grid',
-    gridTemplateColumns: '1fr 2fr 80px',
-    gap: '8px',
-    padding: '6px 0',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
-    fontSize: '12px',
-    color: '#f0e8cc',
-    alignItems: 'start',
-  }
-
-  const labelStyle = {
-    fontSize: '10px',
-    letterSpacing: '0.1em',
-    textTransform: 'uppercase',
-    color: 'rgba(240,232,204,0.5)',
-    marginBottom: '4px',
+  function showToast(msg) {
+    setToast(msg)
+    setTimeout(() => setToast(''), 2500)
   }
 
   return (
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.85)',
-      zIndex: 100,
+      zIndex: 200,
+      background: 'rgba(26,18,6,0.96)',
+      backdropFilter: 'blur(12px)',
       display: 'flex',
       flexDirection: 'column',
-      padding: '24px',
       fontFamily: "'Sarabun', sans-serif",
       overflowY: 'auto',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ color: '#f0e8cc', fontSize: '20px', fontWeight: 700 }}>Queue Manager</h2>
-        <button onClick={onClose} style={{ background: 'none', border: '1px solid rgba(240,232,204,0.4)', color: '#f0e8cc', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px' }}>
+
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '24px 28px 16px',
+        borderBottom: '1px solid rgba(210,185,88,0.2)',
+      }}>
+        <div>
+          <h1 style={{
+            fontFamily: "'Cormorant Garamond', serif",
+            fontSize: '28px',
+            fontWeight: 600,
+            color: '#D2B958',
+            letterSpacing: '0.04em',
+            margin: 0,
+          }}>
+            Rooted
+          </h1>
+          <p style={{ fontSize: '11px', color: 'rgba(210,185,88,0.5)', letterSpacing: '0.14em', textTransform: 'uppercase', margin: '2px 0 0' }}>
+            Queue Manager
+          </p>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none',
+            border: '1px solid rgba(210,185,88,0.3)',
+            color: '#D2B958',
+            padding: '8px 20px',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontFamily: "'Sarabun', sans-serif",
+            letterSpacing: '0.06em',
+          }}
+        >
           Close
         </button>
       </div>
 
-      {/* Action buttons */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <button onClick={clearQueue} style={btnStyle('#8b2020')}>Clear pending queue</button>
-        <button onClick={clearPlayed} style={btnStyle('#3a5225')}>Clear played history</button>
-        <button onClick={clearAll} style={btnStyle('#4a3010')}>Clear everything</button>
+      {/* Stats row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '12px',
+        padding: '20px 28px',
+        borderBottom: '1px solid rgba(210,185,88,0.12)',
+      }}>
+        {[
+          { label: 'Pending', value: entries.length, color: '#D2B958' },
+          { label: 'Played', value: played.length, color: '#8bc34a' },
+          { label: 'Total', value: entries.length + played.length, color: 'rgba(240,232,204,0.6)' },
+        ].map(s => (
+          <div key={s.label} style={{
+            background: 'rgba(210,185,88,0.06)',
+            border: '1px solid rgba(210,185,88,0.15)',
+            borderRadius: '10px',
+            padding: '14px 16px',
+          }}>
+            <p style={{ fontSize: '10px', color: 'rgba(240,232,204,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 6px' }}>{s.label}</p>
+            <p style={{ fontSize: '28px', fontWeight: 700, color: s.color, margin: 0, lineHeight: 1 }}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Actions */}
+      <div style={{ display: 'flex', gap: '10px', padding: '16px 28px', borderBottom: '1px solid rgba(210,185,88,0.12)' }}>
+        <ActionBtn label="Clear pending" onClick={() => doDelete('queue', 'Pending queue')} color="#8b2020" disabled={loading} />
+        <ActionBtn label="Clear history" onClick={() => doDelete('played', 'Play history')} color="#3a5225" disabled={loading} />
+        <ActionBtn label="Clear all" onClick={() => doDelete('all', 'Everything')} color="#4a3010" disabled={loading} />
       </div>
 
       {/* Pending queue */}
-      <div style={{ marginBottom: '24px' }}>
-        <p style={labelStyle}>Pending — {entries.length} leaf{entries.length !== 1 ? 's' : ''} waiting</p>
+      <Section title="Pending" count={entries.length} accent="#D2B958">
         {entries.length === 0
-          ? <p style={{ color: 'rgba(240,232,204,0.4)', fontSize: '12px' }}>Nothing in queue</p>
-          : entries.map((e, i) => (
-            <div key={e.id} style={rowStyle}>
-              <span style={{ opacity: 0.6 }}>{e.prompt}</span>
-              <span>{e.text}</span>
-              <span style={{ opacity: 0.4, fontSize: '10px' }}>{new Date(e.createdAt).toLocaleTimeString()}</span>
-            </div>
-          ))
+          ? <EmptyState label="No leaves waiting" />
+          : entries.map(e => <EntryRow key={e.id} entry={e} dimmed={false} />)
         }
-      </div>
+      </Section>
 
       {/* Played history */}
-      <div>
-        <p style={labelStyle}>Played history — {played.length} total</p>
+      <Section title="Played" count={played.length} accent="#8bc34a">
         {played.length === 0
-          ? <p style={{ color: 'rgba(240,232,204,0.4)', fontSize: '12px' }}>Nothing played yet</p>
-          : played.map((e, i) => (
-            <div key={e.id + i} style={{ ...rowStyle, opacity: 0.5 }}>
-              <span>{e.prompt}</span>
-              <span>{e.text}</span>
-              <span style={{ fontSize: '10px' }}>{new Date(e.createdAt).toLocaleTimeString()}</span>
-            </div>
-          ))
+          ? <EmptyState label="Nothing played yet" />
+          : [...played].reverse().map((e, i) => <EntryRow key={e.id + i} entry={e} dimmed />)
         }
-      </div>
+      </Section>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '28px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#3a5225',
+          color: '#f0e8cc',
+          padding: '10px 24px',
+          borderRadius: '30px',
+          fontSize: '13px',
+          fontFamily: "'Sarabun', sans-serif",
+          letterSpacing: '0.06em',
+          zIndex: 300,
+        }}>
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
 
-function btnStyle(bg) {
-  return {
-    background: bg,
-    color: '#f0e8cc',
-    border: 'none',
-    borderRadius: '6px',
-    padding: '8px 14px',
-    fontSize: '12px',
-    fontFamily: "'Sarabun', sans-serif",
-    cursor: 'pointer',
-  }
+function ActionBtn({ label, onClick, color, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: color,
+        color: '#f0e8cc',
+        border: 'none',
+        borderRadius: '8px',
+        padding: '9px 16px',
+        fontSize: '12px',
+        fontFamily: "'Sarabun', sans-serif",
+        fontWeight: 700,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        letterSpacing: '0.05em',
+        flex: 1,
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
+function Section({ title, count, accent, children }) {
+  return (
+    <div style={{ padding: '20px 28px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <span style={{ fontSize: '11px', color: accent, textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 700 }}>{title}</span>
+        <span style={{ fontSize: '11px', color: 'rgba(240,232,204,0.3)', background: 'rgba(255,255,255,0.05)', padding: '1px 8px', borderRadius: '20px' }}>{count}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function EmptyState({ label }) {
+  return (
+    <p style={{ fontSize: '13px', color: 'rgba(240,232,204,0.25)', fontStyle: 'italic', padding: '8px 0' }}>{label}</p>
+  )
+}
+
+function EntryRow({ entry, dimmed }) {
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: '1fr 1.8fr 72px',
+      gap: '10px',
+      padding: '10px 0',
+      borderBottom: '1px solid rgba(210,185,88,0.08)',
+      opacity: dimmed ? 0.45 : 1,
+      alignItems: 'start',
+    }}>
+      <span style={{ fontSize: '12px', color: 'rgba(240,232,204,0.55)', lineHeight: 1.5 }}>{entry.prompt}</span>
+      <span style={{ fontSize: '13px', color: '#f0e8cc', fontWeight: 700, lineHeight: 1.5 }}>{entry.text}</span>
+      <span style={{ fontSize: '10px', color: 'rgba(210,185,88,0.4)', textAlign: 'right', paddingTop: '2px' }}>
+        {new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </span>
+    </div>
+  )
 }
 
 // ── Main display page ─────────────────────────────────────────────────────────
@@ -221,16 +383,15 @@ export default function DisplayPage() {
   const [leaves, setLeaves] = useState([])
   const [fontReady, setFontReady] = useState(false)
   const [showPanel, setShowPanel] = useState(false)
-  const spawnQueueRef = useRef([])     // ordered list of entries waiting to spawn
-  const spawnTimerRef = useRef(null)   // timeout handle for next spawn
-  const playedRef = useRef([])         // entries that have been shown at least once
+  const spawnQueueRef = useRef([])
+  const spawnTimerRef = useRef(null)
 
   // Font loading
   useEffect(() => {
     if (typeof document === 'undefined') return
     const link = document.createElement('link')
     link.rel = 'stylesheet'
-    link.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@700&display=swap'
+    link.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@700&family=Cormorant+Garamond:wght@600&display=swap'
     document.head.appendChild(link)
     if ('fonts' in document) {
       document.fonts.load("700 30px 'Sarabun'").then(() => setFontReady(true))
@@ -239,77 +400,76 @@ export default function DisplayPage() {
     }
   }, [])
 
-  // Spawn the next leaf from the internal spawn queue
+  // Spawn next leaf from internal queue
   function scheduleNext(immediate = false) {
     if (spawnTimerRef.current) clearTimeout(spawnTimerRef.current)
-    spawnTimerRef.current = setTimeout(() => {
-      if (spawnQueueRef.current.length === 0) return
-      const entry = spawnQueueRef.current.shift()
-      // Mark as played in localStorage
-      const played = JSON.parse(localStorage.getItem('rooted_played') || '[]')
-      if (!played.find(p => p.id === entry.id)) {
-        played.push(entry)
-        localStorage.setItem('rooted_played', JSON.stringify(played))
+    spawnTimerRef.current = setTimeout(async () => {
+      if (spawnQueueRef.current.length === 0) {
+        spawnTimerRef.current = null
+        return
       }
+      const entry = spawnQueueRef.current.shift()
+
+      // Tell server this entry has been played
+      try {
+        await fetch('/api/queue', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(entry),
+        })
+      } catch (e) {}
+
       const leafId = `${entry.id}_${Date.now()}`
       setLeaves(prev => [...prev, { ...entry, leafId }])
-      // Schedule the next one
+
       if (spawnQueueRef.current.length > 0) scheduleNext()
-    }, immediate ? 500 : STAGGER_MS)
+      else spawnTimerRef.current = null
+    }, immediate ? 600 : STAGGER_MS)
   }
 
-  // Poll localStorage for new submissions
+  // Poll server for new submissions
   useEffect(() => {
-    function checkQueue() {
+    async function checkQueue() {
       try {
-        const raw = localStorage.getItem('rooted_queue')
-        if (!raw) return
-        const queue = JSON.parse(raw)
-        if (!queue.length) return
+        const res = await fetch('/api/queue')
+        const { pending } = await res.json()
+        if (!pending?.length) return
 
-        // Add new entries to spawn queue (avoid duplicates)
         const existingIds = new Set(spawnQueueRef.current.map(e => e.id))
-        const newEntries = queue.filter(e => !existingIds.has(e.id))
+        const newEntries = pending.filter(e => !existingIds.has(e.id))
         if (newEntries.length > 0) {
           spawnQueueRef.current.push(...newEntries)
-          // Clear from localStorage queue
-          localStorage.setItem('rooted_queue', JSON.stringify([]))
-          // Kick off spawning if not already running
           if (!spawnTimerRef.current) scheduleNext(true)
         }
-      } catch (e) {
-        console.error('queue read error', e)
-      }
+      } catch (e) {}
     }
 
-    const interval = setInterval(checkQueue, 1000)
+    const interval = setInterval(checkQueue, 2000)
     checkQueue()
     return () => clearInterval(interval)
   }, [])
 
-  // Periodic replay — re-queue played entries so the display stays active
+  // Periodic replay of played entries
   useEffect(() => {
-    const replayInterval = setInterval(() => {
+    const t = setInterval(async () => {
+      if (spawnQueueRef.current.length > 0) return
       try {
-        const played = JSON.parse(localStorage.getItem('rooted_played') || '[]')
-        if (played.length === 0) return
-        // Only re-queue if spawn queue is empty — don't pile up
-        if (spawnQueueRef.current.length > 0) return
-        // Shuffle played entries and add them back
+        const res = await fetch('/api/queue')
+        const { played } = await res.json()
+        if (!played?.length) return
         const shuffled = [...played].sort(() => Math.random() - 0.5)
         spawnQueueRef.current.push(...shuffled)
         scheduleNext(true)
       } catch (e) {}
     }, REPLAY_INTERVAL_MS)
-
-    return () => clearInterval(replayInterval)
+    return () => clearInterval(t)
   }, [])
 
   function removeLeaf(leafId) {
     setLeaves(prev => prev.filter(l => l.leafId !== leafId))
   }
 
-  // Secret tap in top-right corner to open operator panel
+  // Secret 5-tap top-right corner to open operator panel
   const tapCountRef = useRef(0)
   const tapTimerRef = useRef(null)
   function handleCornerTap() {
@@ -325,10 +485,9 @@ export default function DisplayPage() {
   return (
     <main
       className="relative w-screen h-screen overflow-hidden"
-      style={{ backgroundColor: '#F3E6CB' }}
+      style={{ backgroundColor: '#D2B958' }}
     >
-
-      {/* Secret tap zone — top right corner, tap 5 times to open panel */}
+      {/* Secret tap zone */}
       <div
         onClick={handleCornerTap}
         style={{ position: 'fixed', top: 0, right: 0, width: 60, height: 60, zIndex: 50 }}
