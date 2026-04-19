@@ -17,7 +17,7 @@ const PROMPTS = [
 "What I stand for...",
 ]
 
-const MAX_CHARS = 20;
+const MAX_CHARS = 30;
 
 export default function LandingPage() {
   const [formVisible, setFormVisible] = useState(false)
