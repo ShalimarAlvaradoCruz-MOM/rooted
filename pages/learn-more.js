@@ -12,8 +12,6 @@ export default function LearnMore() {
         href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
         rel="stylesheet"
       />
-
-      {/* ── Nav ────────────────────────────────────────────── */}
       <nav
         className="w-full flex items-center justify-between px-6 py-4"
         style={{ borderBottom: '1px solid rgba(180, 148, 60, 0.3)' }}
@@ -42,13 +40,11 @@ export default function LearnMore() {
         </span>
       </nav>
 
-      {/* ── Hero video ─────────────────────────────────────── */}
       <section className="w-full relative" style={{ background: '#1a1a1a' }}>
         <div
           className="w-full flex items-center justify-center"
           style={{ minHeight: '60vh' }}
         >
-          {/* Replace src with your video path */}
           <video
             autoPlay
             muted
@@ -60,7 +56,6 @@ export default function LearnMore() {
             <source src="/videos/rooted-hero.mp4" type="video/mp4" />
           </video>
 
-          {/* Overlay title on video */}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
             style={{ background: 'rgba(0,0,0,0.35)' }}
@@ -93,7 +88,6 @@ export default function LearnMore() {
         </div>
       </section>
 
-      {/* ── Intro statement ────────────────────────────────── */}
       <section
         className="w-full max-w-2xl mx-auto px-6 py-20 text-center"
       >
@@ -106,22 +100,18 @@ export default function LearnMore() {
             lineHeight: 1.7,
           }}
         >
-          {/* Replace with your opening statement */}
           "What does it mean to be rooted — in a place, a value, a community?"
         </p>
       </section>
 
-      {/* ── Divider ────────────────────────────────────────── */}
       <div
         className="w-16 mx-auto"
         style={{ borderTop: '2px solid #c9b580', marginBottom: '80px' }}
       />
 
-      {/* ── About section ──────────────────────────────────── */}
       <section className="w-full max-w-3xl mx-auto px-6 pb-24">
         <div className="grid grid-cols-1 gap-16" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
 
-          {/* About the work */}
           <div>
             <h2
               style={{
@@ -142,7 +132,6 @@ export default function LearnMore() {
                 lineHeight: 1.9,
               }}
             >
-              {/* Replace with your project description */}
               Rooted is an interactive installation that invites participants to
               reflect on what grounds them. Through a series of prompts, visitors
               contribute a leaf to a growing digital tree — a collective portrait
@@ -150,7 +139,6 @@ export default function LearnMore() {
             </p>
           </div>
 
-          {/* About the process */}
           <div>
             <h2
               style={{
@@ -171,7 +159,6 @@ export default function LearnMore() {
                 lineHeight: 1.9,
               }}
             >
-              {/* Replace with your process description */}
               Each tree was hand-sculpted using traditional techniques, then
               digitally extended through NFC-triggered animations and a
               custom-built display system. The result is a living archive of
@@ -182,12 +169,10 @@ export default function LearnMore() {
         </div>
       </section>
 
-      {/* ── Image / media placeholder ──────────────────────── */}
       <section
         className="w-full px-6 pb-24 max-w-4xl mx-auto"
         style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
       >
-        {/* Replace these with your actual images */}
         {[1, 2, 3].map(i => (
           <div
             key={i}
@@ -206,7 +191,6 @@ export default function LearnMore() {
         ))}
       </section>
 
-      {/* ── Artist / credits ───────────────────────────────── */}
       <section
         className="w-full py-20 text-center px-6"
         style={{ borderTop: '1px solid rgba(180, 148, 60, 0.3)' }}
@@ -232,8 +216,7 @@ export default function LearnMore() {
             margin: '0 auto 32px',
           }}
         >
-          {/* Replace with your bio */}
-          Your name / bio / institutional affiliation goes here.
+          Shalimar Cruz Hebbeler
           Thesis Installation, ATLAS Institute, University of Colorado Boulder.
         </p>
 
@@ -252,8 +235,6 @@ export default function LearnMore() {
           ← Leave your leaf
         </button>
       </section>
-
-      {/* ── Footer ─────────────────────────────────────────── */}
       <footer
         className="w-full py-6 text-center"
         style={{

@@ -40,7 +40,7 @@ export default function LandingPage() {
     setLeavesActive(true)
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!answer.trim()) return
 
     const entry = {
@@ -51,11 +51,13 @@ export default function LandingPage() {
     }
 
     try {
-      const raw = localStorage.getItem('rooted_queue')
-      const existing = raw ? JSON.parse(raw) : []
-      localStorage.setItem('rooted_queue', JSON.stringify([...existing, entry]))
+      await fetch('/api/queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry),
+      })
     } catch (e) {
-      console.error('queue write error', e)
+      console.error('submit error', e)
     }
 
     setSubmitted(true)
@@ -102,7 +104,7 @@ export default function LandingPage() {
             minHeight: '180px',
           }}
         >
-          {/* Form panel */}
+          {/* form */}
           <div
             className="transition-all duration-700 ease-in-out"
             style={{
@@ -163,7 +165,7 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Thank you panel */}
+          {/* ty */}
           <div
             className="transition-all duration-700 ease-in-out flex flex-col items-center justify-center text-center gap-4"
             style={{
