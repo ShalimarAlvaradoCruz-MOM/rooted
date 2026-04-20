@@ -5,7 +5,7 @@ export default function LearnMore() {
 
   return (
     <main
-      className="min-h-screen w-full"
+      className="min-h-screen max-w-full"
       style={{ backgroundColor: '#f5f0e8', fontFamily: "'Sarabun', sans-serif" }}
     >
       <link
