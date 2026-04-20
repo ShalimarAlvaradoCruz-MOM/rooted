@@ -8,7 +8,6 @@ const LEAF_COLORS = [
   '#4a6b30', '#354f22', '#263c18',
 ]
 
-// ── Catmull-Rom spline solver ─────────────────────────────────────────────────
 function solve(data) {
   const size = data.length
   const last = size - 4
@@ -25,7 +24,6 @@ function solve(data) {
   return path
 }
 
-// ── Point generator — angle in radians, natural random drift ─────────────────
 function makePoints(startX, startY, angleRad, length, spread) {
   const count = Math.floor(length / 5)
   const pts = [{ x: startX, y: startY }]
@@ -41,8 +39,40 @@ function makePoints(startX, startY, angleRad, length, spread) {
   return pts
 }
 
-// ── Draw a path with stroke-dashoffset animation ──────────────────────────────
-function animatePath(parent, pathD, stroke, strokeW, duration, delay, onUpdate, onComplete) {
+function generateForkAngles(parentAngle, count) {
+  if (count === 1) return [parentAngle + (Math.random() * 0.3 - 0.15)]
+  if (count === 2) {
+    const spread = 0.35 + Math.random() * 0.45
+    const bias = Math.random() * 0.15 - 0.075
+    return [
+      parentAngle - spread * 0.4 + bias,
+      parentAngle + spread * 0.6 + bias,
+    ]
+  }
+  if (count === 3) {
+    const spread = 0.3 + Math.random() * 0.35
+    return [
+      parentAngle - spread + Math.random() * 0.1,
+      parentAngle + Math.random() * 0.15 - 0.075,
+      parentAngle + spread + Math.random() * 0.1,
+    ]
+  }
+  return [parentAngle]
+}
+
+function strokeColor(w) {
+  if (w > 9)   return '#4a2810'
+  if (w > 6)   return '#6b3e1a'
+  if (w > 3.5) return '#8c5830'
+  if (w > 2)   return '#a06838'
+  return '#b07840'
+}
+
+function isOnScreen(x, y, W, H, margin = 60) {
+  return x >= -margin && x <= W + margin && y >= -margin && y <= H + margin
+}
+
+function animatePath(parent, pathD, stroke, strokeW, duration, onUpdate, onComplete) {
   const path = document.createElementNS(NS, 'path')
   path.setAttribute('d', pathD)
   path.setAttribute('fill', 'none')
@@ -59,33 +89,49 @@ function animatePath(parent, pathD, stroke, strokeW, duration, delay, onUpdate, 
   const tween = gsap.to(path, {
     strokeDashoffset: 0,
     duration,
-    delay,
     ease: 'power2.inOut',
     onUpdate() { onUpdate?.(tween.progress(), path) },
     onComplete,
   })
-
   return path
 }
 
-// ── Leaf spawner ──────────────────────────────────────────────────────────────
-function makeLeaf(leafLayer, x, y, angle, scale, color) {
+// Leaf that visually connects its stem to the branch point
+// The stem line goes FROM the branch surface TOWARD the leaf body
+// branchAngle tells us which direction the branch is going so we
+// can orient the stem perpendicular to it — making it look attached
+function makeLeaf(leafLayer, bx, by, branchAngle, side, scale, color) {
   const g = document.createElementNS(NS, 'g')
 
+  // Stem grows perpendicular to branch direction, alternating sides
+  // branchAngle is in radians — stem goes 90deg off that
+  const stemAngle = branchAngle + side * (Math.PI / 2)
+  const stemLen = 8 + Math.random() * 6
+  const stemEndX = Math.cos(stemAngle) * stemLen
+  const stemEndY = Math.sin(stemAngle) * stemLen
+
+  // Stem line — starts at branch point, grows outward
   const stem = document.createElementNS(NS, 'line')
-  stem.setAttribute('x1', '0'); stem.setAttribute('y1', '0')
-  stem.setAttribute('x2', '0'); stem.setAttribute('y2', '4')
-  stem.setAttribute('stroke', '#2a3d18')
-  stem.setAttribute('stroke-width', '1')
+  stem.setAttribute('x1', '0')
+  stem.setAttribute('y1', '0')
+  stem.setAttribute('x2', stemEndX.toFixed(2))
+  stem.setAttribute('y2', stemEndY.toFixed(2))
+  stem.setAttribute('stroke', '#3a2d18')
+  stem.setAttribute('stroke-width', '1.2')
   stem.setAttribute('stroke-linecap', 'round')
   g.appendChild(stem)
+
+  // Leaf body — positioned at end of stem
+  const leafG = document.createElementNS(NS, 'g')
+  leafG.setAttribute('transform', `translate(${stemEndX.toFixed(2)}, ${stemEndY.toFixed(2)}) rotate(${(stemAngle * 180 / Math.PI - 90).toFixed(1)})`)
 
   const leaf = document.createElementNS(NS, 'path')
   leaf.setAttribute('d', 'M0,0 C5,-2 9,-10 8,-18 C7,-26 1,-30 0,-32 C-1,-30 -7,-26 -8,-18 C-9,-10 -5,-2 0,0z')
   leaf.setAttribute('fill', color)
   leaf.setAttribute('opacity', '0.92')
-  g.appendChild(leaf)
+  leafG.appendChild(leaf)
 
+  // Midrib vein
   const vein = document.createElementNS(NS, 'line')
   vein.setAttribute('x1', '0'); vein.setAttribute('y1', '0')
   vein.setAttribute('x2', '0'); vein.setAttribute('y2', '-28')
@@ -93,10 +139,13 @@ function makeLeaf(leafLayer, x, y, angle, scale, color) {
   vein.setAttribute('stroke-width', '0.6')
   vein.setAttribute('stroke-linecap', 'round')
   vein.setAttribute('opacity', '0.5')
-  g.appendChild(vein)
+  leafG.appendChild(vein)
 
+  g.appendChild(leafG)
   leafLayer.appendChild(g)
-  gsap.set(g, { x, y, rotation: angle, scale: 0, transformOrigin: '0 0' })
+
+  // Place the whole group at the branch point
+  gsap.set(g, { x: bx, y: by, scale: 0, transformOrigin: '0 0' })
   gsap.to(g, {
     scale,
     duration: 0.4 + Math.random() * 0.3,
@@ -104,13 +153,12 @@ function makeLeaf(leafLayer, x, y, angle, scale, color) {
   })
 }
 
-// ── Sway ──────────────────────────────────────────────────────────────────────
 function addSway(svgEl) {
-  const paths = svgEl.querySelectorAll('path')
-  paths.forEach((path, i) => {
+  if (!svgEl) return
+  svgEl.querySelectorAll('path[stroke]').forEach((path) => {
     gsap.to(path, {
-      skewX: (Math.random() - 0.5) * 1.2,
-      skewY: (Math.random() - 0.5) * 0.4,
+      skewX: (Math.random() - 0.5) * 1.0,
+      skewY: (Math.random() - 0.5) * 0.3,
       duration: 2.5 + Math.random() * 2,
       repeat: -1,
       yoyo: true,
@@ -119,10 +167,6 @@ function addSway(svgEl) {
     })
   })
 }
-
-// ── Recursive fractal branch builder ─────────────────────────────────────────
-// angle in radians. 0 = right, PI/2 = down, PI = left
-// strokeW tapers with depth. Stops when strokeW < 0.8 or depth > maxDepth.
 
 function buildBranch({
   branchLayer,
@@ -133,9 +177,7 @@ function buildBranch({
   strokeW,
   depth,
   maxDepth,
-  side,           // 'left' | 'right' — keeps asymmetry natural
-  delay,
-  onBranchDone,
+  W, H,
   totalRef,
   doneRef,
   midpointRef,
@@ -143,23 +185,9 @@ function buildBranch({
   onMidpoint,
   onComplete,
 }) {
-  if (depth > maxDepth || strokeW < 0.7) {
-    onBranchDone?.()
-    return
-  }
+  if (depth > maxDepth || strokeW < 0.3) return
 
   totalRef.current++
-
-  // Color gets lighter as branches get thinner
-  const stroke = strokeW > 9
-    ? '#4a2810'
-    : strokeW > 6
-    ? '#6b3e1a'
-    : strokeW > 3.5
-    ? '#8c5830'
-    : strokeW > 2
-    ? '#a06838'
-    : '#b07840'
 
   const spread = 0.8 + depth * 0.3
   const pts = makePoints(x, y, angle, length, spread)
@@ -167,47 +195,47 @@ function buildBranch({
   pts.forEach(p => coords.push(p.x, p.y))
   const pathD = solve(coords)
 
-  // Leaves only on thinner branches (depth >= 2)
-  const leafTotal = depth >= 2 ? Math.floor(2 + Math.random() * 5) : 0
+  // Only spawn leaves on branches depth 2+ whose start point is on-screen
+  const canHaveLeaves = depth >= 2 && isOnScreen(x, y, W, H)
+  const leafTotal = canHaveLeaves ? Math.floor(2 + Math.random() * 5) : 0
   let leafsSpawned = 0
 
-  const duration = 0.1 + length * 0.011 + depth * 0.025
+  const duration = 0.2 + length * 0.011 + depth * 0.025
 
   animatePath(
-    branchLayer, pathD, stroke, strokeW,
-    duration, delay,
-    function (prog) {
+    branchLayer, pathD, strokeColor(strokeW), strokeW, duration,
+    function(prog) {
       if (leafTotal === 0) return
       const shouldHave = Math.floor(prog * leafTotal)
       while (leafsSpawned < shouldHave) {
-        const t = 0.2 + (leafsSpawned / Math.max(leafTotal - 1, 1)) * 0.8
+        // Sample the point along pts that matches current draw progress
+        const t = 0.15 + (leafsSpawned / Math.max(leafTotal - 1, 1)) * 0.85
         const idx = Math.floor(t * (pts.length - 1))
         const pt = pts[Math.min(idx, pts.length - 1)]
-        const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)]
-        const leafSide = leafsSpawned % 2 === 0 ? 1 : -1
-        const leafAngle = leafSide * (20 + Math.random() * 45)
-        const scale = 0.55 + Math.random() * 0.65
-        makeLeaf(leafLayer, pt.x, pt.y, leafAngle, scale, color)
+
+        // Only place leaf if this exact point is on screen
+        if (isOnScreen(pt.x, pt.y, W, H, 20)) {
+          const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)]
+          // Alternate sides: +1 = left of branch direction, -1 = right
+          const side = leafsSpawned % 2 === 0 ? 1 : -1
+          const scale = 0.65 + Math.random() * 0.5
+          // Pass the branch angle so the stem can orient perpendicular to it
+          makeLeaf(leafLayer, pt.x, pt.y, angle, side, scale, color)
+        }
         leafsSpawned++
       }
     },
-    function () {
+    function() {
       doneRef.current++
 
+      // Midpoint check only — no completion here to prevent early stop
       if (!midpointRef.current && doneRef.current >= midThreshold) {
         midpointRef.current = true
         onMidpoint?.()
       }
 
-      if (doneRef.current >= totalRef.current) {
-        onComplete?.()
-      }
-
-      // End point of this branch — fork here
       const endPt = pts[pts.length - 1]
 
-      // How many children — varies by depth and randomness
-      // Depth 0–1: always 2 children. Deeper: 1 or 2, less often 3.
       const numChildren = depth < 2
         ? 2
         : Math.random() < 0.15
@@ -216,16 +244,11 @@ function buildBranch({
         ? 2
         : 1
 
-      // Fork angles — irregular, not mirrored
-      // Main branch continues roughly in same direction with slight curve
-      // Sub-branches fork off at organic angles
-      const forkAngles = generateForkAngles(angle, numChildren, side)
-      const childDelay = 0.01
+      const childLength = length * (0.68 + Math.random() * 0.18)
+      const childW = strokeW * (0.62 + Math.random() * 0.12)
+      const forkAngles = generateForkAngles(angle, numChildren)
 
-      forkAngles.forEach((forkAngle, i) => {
-        const childLength = length * (0.62 + Math.random() * 0.2)
-        const childW = strokeW * (0.55 + Math.random() * 0.15)
-
+      forkAngles.forEach(forkAngle => {
         buildBranch({
           branchLayer,
           leafLayer,
@@ -236,9 +259,7 @@ function buildBranch({
           strokeW: childW,
           depth: depth + 1,
           maxDepth,
-          side,
-          delay: childDelay * i,
-          onBranchDone,
+          W, H,
           totalRef,
           doneRef,
           midpointRef,
@@ -251,39 +272,6 @@ function buildBranch({
   )
 }
 
-// ── Fork angle generator — organic, asymmetric ────────────────────────────────
-// Returns array of angles for child branches
-function generateForkAngles(parentAngle, count, side) {
-  if (count === 1) {
-    // Slight curve continuation
-    return [parentAngle + (Math.random() * 0.3 - 0.15)]
-  }
-
-  if (count === 2) {
-    // One continues roughly forward, one forks off to the side
-    // The fork direction biases toward hanging down (positive Y)
-    const spread = 0.35 + Math.random() * 0.45  // radians between forks
-    const bias = Math.random() * 0.15 - 0.075    // slight asymmetry
-
-    return [
-      parentAngle - spread * 0.4 + bias,
-      parentAngle + spread * 0.6 + bias,
-    ]
-  }
-
-  if (count === 3) {
-    const spread = 0.3 + Math.random() * 0.35
-    return [
-      parentAngle - spread + Math.random() * 0.1,
-      parentAngle + Math.random() * 0.15 - 0.075,
-      parentAngle + spread + Math.random() * 0.1,
-    ]
-  }
-
-  return [parentAngle]
-}
-
-// ── Component ─────────────────────────────────────────────────────────────────
 export default function BranchCanvas({ onMidpoint, onComplete }) {
   const svgRef = useRef(null)
   const containerRef = useRef(null)
@@ -299,17 +287,15 @@ export default function BranchCanvas({ onMidpoint, onComplete }) {
     const H = container.offsetHeight
 
     const branchLayer = document.createElementNS(NS, 'g')
-    const leafLayer = document.createElementNS(NS, 'g')
+    const leafLayer   = document.createElementNS(NS, 'g')
     svg.appendChild(branchLayer)
     svg.appendChild(leafLayer)
 
-    // Shared counters across all trees
-    const totalRef = { current: 0 }
-    const doneRef = { current: 0 }
-    const midpointRef = { current: false }
+    const totalRef      = { current: 0 }
+    const doneRef       = { current: 0 }
+    const midpointRef   = { current: false }
     const completeFired = { current: false }
 
-    // Wrap onComplete to fire only once
     function handleComplete() {
       if (completeFired.current) return
       completeFired.current = true
@@ -317,60 +303,11 @@ export default function BranchCanvas({ onMidpoint, onComplete }) {
       addSway(svg)
     }
 
-    // Mid threshold — fire after ~40% of branches done
-    // We don't know total upfront (recursive), so we use a time-based fallback too
-    const midThreshold = 12
-
-    // ── TRUNK CONFIGS ─────────────────────────────────────────
-    // Each entry is a trunk that kicks off a recursive tree.
-    // angle: radians. 0=right, PI=left, PI/2=down.
-    // Trunks run along top edge then fork downward.
-
     const trunks = [
-
-      // ── LEFT CORNER ──────────────────────────────────────────
-      // Main trunk runs rightward along top edge
-      {
-        x: 0, y: 2,
-        angle: 0.08,              // nearly horizontal, slight downward lean
-        length: W * 0.38,         // reaches ~38% across top
-        strokeW: 14,
-        maxDepth: 6,
-        side: 'left',
-        delay: 0,
-      },
-      // Left side trunk runs downward along left edge
-      {
-        x: 2, y: 0,
-        angle: Math.PI / 2 + 0.06, // nearly straight down, slight inward lean
-        length: H * 0.32,
-        strokeW: 11,
-        maxDepth: 5,
-        side: 'left',
-        delay: 0.1,
-      },
-
-      // ── RIGHT CORNER ─────────────────────────────────────────
-      // Main trunk runs leftward along top edge
-      {
-        x: W, y: 2,
-        angle: Math.PI - 0.08,   // nearly horizontal leftward
-        length: W * 0.38,
-        strokeW: 14,
-        maxDepth: 6,
-        side: 'right',
-        delay: 0,
-      },
-      // Right side trunk runs downward along right edge
-      {
-        x: W - 2, y: 0,
-        angle: Math.PI / 2 - 0.06, // nearly straight down, slight inward lean
-        length: H * 0.32,
-        strokeW: 11,
-        maxDepth: 5,
-        side: 'right',
-        delay: 0.1,
-      },
+      { x: 0,     y: 2, angle: 0.08,               length: W * 0.42, strokeW: 14, maxDepth: 9 },
+      { x: 2,     y: 0, angle: Math.PI / 2 + 0.06, length: H * 0.35, strokeW: 11, maxDepth: 8 },
+      { x: W,     y: 2, angle: Math.PI - 0.08,      length: W * 0.42, strokeW: 14, maxDepth: 9 },
+      { x: W - 2, y: 0, angle: Math.PI / 2 - 0.06, length: H * 0.35, strokeW: 11, maxDepth: 8 },
     ]
 
     trunks.forEach(trunk => {
@@ -384,18 +321,17 @@ export default function BranchCanvas({ onMidpoint, onComplete }) {
         strokeW: trunk.strokeW,
         depth: 0,
         maxDepth: trunk.maxDepth,
-        side: trunk.side,
-        delay: trunk.delay,
+        W, H,
         totalRef,
         doneRef,
         midpointRef,
-        midThreshold,
+        midThreshold: 12,
         onMidpoint,
         onComplete: handleComplete,
       })
     })
 
-    // Time-based midpoint fallback — in case recursive count is slow to accumulate
+    // Midpoint fallback — form fades in after 1.4s regardless
     const midFallback = setTimeout(() => {
       if (!midpointRef.current) {
         midpointRef.current = true
@@ -403,8 +339,15 @@ export default function BranchCanvas({ onMidpoint, onComplete }) {
       }
     }, 1400)
 
+    // Completion fallback — sway starts after 8s regardless of recursive count
+    // This prevents the counter race condition from stopping growth early
+    const completeFallback = setTimeout(() => {
+      handleComplete()
+    }, 8000)
+
     return () => {
       clearTimeout(midFallback)
+      clearTimeout(completeFallback)
       gsap.killTweensOf(svg.querySelectorAll('*'))
     }
   }, [])

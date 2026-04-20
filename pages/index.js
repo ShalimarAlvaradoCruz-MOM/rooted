@@ -67,22 +67,26 @@ export default function LandingPage() {
 
   return (
     <main
-      className="relative w-full h-screen overflow-hidden flex flex-col items-center justify-center"
-      style={{ backgroundColor: '#D2B958' }}
+      className="relative max-w-full h-screen overflow-hidden flex flex-col items-center justify-center"
+      style={{ backgroundColor: '#EEE8D2' }}
     >
 
       <div className="absolute inset-0 z-[1]">
         <BranchCanvas
           onMidpoint={handleMidpoint}
           onComplete={handleTreeComplete}
-        />
+        /> 
       </div>
        
-      <div className="relative z-10 flex flex-col items-center gap-6 px-6 w-full max-w-sm">
-        <div className="text-center">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-6 px-6 py-4 w-full max-w-sm">
+       <div className="text-center p-2" style={{
+          background: 'radial-gradient(ellipse 85% 70% at 50% 50%, rgba(238,232,210,0.92) 0%, rgba(238,232,210,0.5) 55%, transparent 100%)',
+          borderRadius: '50%',
+          padding: '20px 24px',
+        }}>
           <h1
             className="text-6xl font-semibold tracking-wide"
-            style={{ fontFamily: "'Cormorant Garamond', sans-serif", color: '#1a2710' }}
+            style={{ fontFamily: "'Cormorant Garamond', sans-serif", color: '#603913' }}
           >
             Rooted
           </h1>
@@ -90,14 +94,19 @@ export default function LandingPage() {
             className="mt-2 text-sm tracking-widest uppercase"
             style={{ fontFamily: "'Sarabun', sans-serif", color: '#3a2e0e', opacity: 0.75 }}
           >
-            Community reflections on values, growth, and what grounds us
+            Like roots beneath the soil, 
+            <br/>
+            we are stronger intertwined.
+            <br/>
+            <br/>
+            Reflect. Share. Be heard.
           </p>
         </div>
 
         <div
           className="rounded-xl p-5 w-full relative overflow-hidden"
           style={{
-            background: 'rgba(240, 234, 216, 0.82)',
+            background: '#E5DBBA',
             border: '1px solid rgba(180, 148, 60, 0.5)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
@@ -117,7 +126,7 @@ export default function LandingPage() {
           >
             <p
               className="text-base mb-3 leading-snug text-center"
-              style={{ fontFamily: "'Sarabun', sans-serif", color: '#2d1f0a' }}
+              style={{ fontFamily: "'Sarabun', sans-serif", color: '#603913', fontWeight: 500 }}
             >
               {prompt}
             </p>
@@ -134,7 +143,7 @@ export default function LandingPage() {
               style={{
                 fontFamily: "'Sarabun', sans-serif",
                 background: 'rgba(250, 247, 238, 0.9)',
-                border: '1px solid #c9b580',
+                border: '2px solid #c9b580',
                 color: '#2d1f0a',
               }}
             />
@@ -161,7 +170,7 @@ export default function LandingPage() {
                 cursor: !answer.trim() ? 'not-allowed' : 'pointer',
               }}
             >
-              Share with the community
+              Leaf it 
             </button>
           </div>
 
