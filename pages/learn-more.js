@@ -1,364 +1,364 @@
 import { useRouter } from 'next/router'
+import { useEffect, useRef } from 'react'
+import Carousel from '@/components/carousel'
+
+const NS = 'http://www.w3.org/2000/svg'
+
+function solve(data) {
+  const size = data.length
+  const last = size - 4
+  let path = 'M' + [data[0], data[1]]
+  for (let i = 0; i < size - 2; i += 2) {
+    const x0 = i ? data[i-2] : data[0], y0 = i ? data[i-1] : data[1]
+    const x1 = data[i], y1 = data[i+1]
+    const x2 = data[i+2], y2 = data[i+3]
+    const x3 = i !== last ? data[i+4] : x2, y3 = i !== last ? data[i+5] : y2
+    const cp1x = (-x0+6*x1+x2)/6, cp1y = (-y0+6*y1+y2)/6
+    const cp2x = (x1+6*x2-x3)/6, cp2y = (y1+6*y2-y3)/6
+    path += 'C' + [cp1x, cp1y, cp2x, cp2y, x2, y2]
+  }
+  return path
+}
+
+function makePoints(startX, startY, angleRad, length, spread) {
+  const count = Math.floor(length / 5)
+  const pts = [{ x: startX, y: startY }]
+  const dirX = Math.cos(angleRad)
+  const dirY = Math.sin(angleRad)
+  for (let i = 1; i <= count; i++) {
+    const drift = spread * (Math.random() * 2 - 1) * i * 0.4
+    pts.push({
+      x: pts[i-1].x + dirX * 5 + drift,
+      y: pts[i-1].y + dirY * 5 + (Math.random() - 0.45) * 1.5,
+    })
+  }
+  return pts
+}
+
+function generateForkAngles(parentAngle, count) {
+  if (count === 1) return [parentAngle + (Math.random() * 0.3 - 0.15)]
+  if (count === 2) {
+    const spread = 0.35 + Math.random() * 0.45
+    const bias = Math.random() * 0.15 - 0.075
+    return [parentAngle - spread * 0.4 + bias, parentAngle + spread * 0.6 + bias]
+  }
+  const spread = 0.3 + Math.random() * 0.35
+  return [
+    parentAngle - spread + Math.random() * 0.1,
+    parentAngle + Math.random() * 0.15 - 0.075,
+    parentAngle + spread + Math.random() * 0.1,
+  ]
+}
+
+const LEAF_COLORS = ['#2d4a1e','#3a5c28','#2a3d1a','#4a6b30','#354f22','#263c18']
+
+function buildStaticBranch(parent, x, y, angle, length, strokeW, depth, maxDepth, W, H) {
+  if (depth > maxDepth || strokeW < 0.3) return
+
+  const spread = 0.8 + depth * 0.3
+  const pts = makePoints(x, y, angle, length, spread)
+  const coords = []
+  pts.forEach(p => coords.push(p.x, p.y))
+
+  const path = document.createElementNS(NS, 'path')
+  path.setAttribute('d', solve(coords))
+  path.setAttribute('fill', 'none')
+  const col = strokeW > 9 ? '#4a2810' : strokeW > 6 ? '#6b3e1a' : strokeW > 3.5 ? '#8c5830' : strokeW > 2 ? '#a06838' : '#b07840'
+  path.setAttribute('stroke', col)
+  path.setAttribute('stroke-width', strokeW)
+  path.setAttribute('stroke-linecap', 'round')
+  path.setAttribute('stroke-linejoin', 'round')
+  parent.appendChild(path)
+
+  if (depth >= 2) {
+    const leafCount = Math.floor(3 + Math.random() * 4)
+    for (let li = 0; li < leafCount; li++) {
+      const t = 0.15 + (li / Math.max(leafCount - 1, 1)) * 0.85
+      const idx = Math.floor(t * (pts.length - 1))
+      const pt = pts[Math.min(idx, pts.length - 1)]
+      if (pt.x < -60 || pt.x > W + 60 || pt.y < -60 || pt.y > H) continue
+
+      const side = li % 2 === 0 ? 1 : -1
+      const stemAngle = angle + side * (Math.PI / 2)
+      const stemLen = 7 + Math.random() * 6
+      const stemEndX = pt.x + Math.cos(stemAngle) * stemLen
+      const stemEndY = pt.y + Math.sin(stemAngle) * stemLen
+
+      const g = document.createElementNS(NS, 'g')
+
+      const stem = document.createElementNS(NS, 'line')
+      stem.setAttribute('x1', pt.x)
+      stem.setAttribute('y1', pt.y)
+      stem.setAttribute('x2', stemEndX.toFixed(1))
+      stem.setAttribute('y2', stemEndY.toFixed(1))
+      stem.setAttribute('stroke', '#3a2d18')
+      stem.setAttribute('stroke-width', '1')
+      stem.setAttribute('stroke-linecap', 'round')
+      g.appendChild(stem)
+
+      const leafRot = (stemAngle * 180 / Math.PI - 90).toFixed(1)
+      const scale = (0.6 + Math.random() * 0.55).toFixed(2)
+      const color = LEAF_COLORS[Math.floor(Math.random() * LEAF_COLORS.length)]
+
+      const leafG = document.createElementNS(NS, 'g')
+      leafG.setAttribute('transform', `translate(${stemEndX.toFixed(1)},${stemEndY.toFixed(1)}) rotate(${leafRot}) scale(${scale})`)
+
+      const leaf = document.createElementNS(NS, 'path')
+      leaf.setAttribute('d', 'M0,0 C5,-2 9,-10 8,-18 C7,-26 1,-30 0,-32 C-1,-30 -7,-26 -8,-18 C-9,-10 -5,-2 0,0z')
+      leaf.setAttribute('fill', color)
+      leaf.setAttribute('opacity', '0.92')
+      leafG.appendChild(leaf)
+
+      const vein = document.createElementNS(NS, 'line')
+      vein.setAttribute('x1', '0'); vein.setAttribute('y1', '0')
+      vein.setAttribute('x2', '0'); vein.setAttribute('y2', '-28')
+      vein.setAttribute('stroke', '#1a2d10')
+      vein.setAttribute('stroke-width', '0.6')
+      vein.setAttribute('stroke-linecap', 'round')
+      vein.setAttribute('opacity', '0.5')
+      leafG.appendChild(vein)
+
+      g.appendChild(leafG)
+      parent.appendChild(g)
+    }
+  }
+
+  const endPt = pts[pts.length - 1]
+  const numChildren = depth < 2 ? 2 : Math.random() < 0.15 ? 3 : Math.random() < 0.5 ? 2 : 1
+  const childLength = length * (0.68 + Math.random() * 0.18)
+  const childW = strokeW * (0.62 + Math.random() * 0.12)
+  generateForkAngles(angle, numChildren).forEach(fa => {
+    buildStaticBranch(parent, endPt.x, endPt.y, fa, childLength, childW, depth + 1, maxDepth, W, H)
+  })
+}
+
+function FixedBranches() {
+  const svgRef = useRef(null)
+
+  useEffect(() => {
+    const svg = svgRef.current
+    if (!svg) return
+    svg.innerHTML = ''
+    const W = window.innerWidth
+    const H = window.innerHeight
+
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
+
+    const g = document.createElementNS(NS, 'g')
+    svg.appendChild(g)
+
+    buildStaticBranch(g, 0, 2, 0.08, W * 0.44, 13, 0, 8, W, H)
+    buildStaticBranch(g, 2, 0, Math.PI / 2 + 0.06, H * 0.5, 10, 0, 7, W, H)
+    buildStaticBranch(g, W, 2, Math.PI - 0.08, W * 0.44, 13, 0, 8, W, H)
+    buildStaticBranch(g, W - 2, 0, Math.PI / 2 - 0.06, H * 0.5, 10, 0, 7, W, H)
+  }, [])
+
+  return (
+    <svg
+      ref={svgRef}
+      className="fixed top-0 left-0 w-full h-screen pointer-events-none"
+      style={{ zIndex: 1, overflow: 'visible' }}
+      xmlns={NS}
+    />
+  )
+}
+
+function Card({ children, className = '' }) {
+  return (
+    <div className={`bg-[#E5DBBA] border border-[#c9b580] rounded-xl p-6 ${className}`}>
+      {children}
+    </div>
+  )
+}
 
 export default function LearnMore() {
   const router = useRouter()
 
   return (
-    <main
-      className="min-h-screen max-w-full"
-      style={{ backgroundColor: '#EEE8D2', fontFamily: "'Sarabun', sans-serif" }}
-    >
-      <link
-        href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
-        rel="stylesheet"
-      />
+    <main className="min-h-screen w-full bg-[#EEE8D2] font-['Sarabun',sans-serif] overflow-x-hidden relative">
 
-      <nav
-        className="w-full flex items-center justify-between px-6 py-4"
-        style={{ borderBottom: '1px solid rgba(96, 57, 19, 0.2)' }}
-      >
-        <span
-          onClick={() => router.push('/')}
-          className="cursor-pointer"
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: '22px',
-            fontWeight: 600,
-            color: '#603913',
-          }}
-        >
-          Rooted
-        </span>
-        <span
-          style={{
-            fontSize: '11px',
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: '#8a7040',
-          }}
-        >
-          An Interactive Installation
-        </span>
-      </nav>
+      <FixedBranches />
 
-      <section className="w-full relative" style={{ background: '#1a1208' }}>
-        <div className="w-full flex items-center justify-center" style={{ minHeight: '65vh' }}>
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="w-full object-cover"
-            style={{ maxHeight: '70vh' }}
+      <div className="relative z-10">
+
+        <nav className="w-full flex items-center justify-between px-6 py-4 border-b border-[#603913]/20 bg-[#EEE8D2]/80 backdrop-blur-md sticky top-0 z-20">
+          <span
+            onClick={() => router.push('/')}
+            className="cursor-pointer text-[22px] font-bold text-[#603913]"
           >
-            <source src="/videos/rooted-hero.mp4" type="video/mp4" />
-          </video>
-          <div
-            className="absolute inset-0 flex flex-col items-center justify-center text-center px-6"
-            style={{ background: 'rgba(10,8,3,0.42)' }}
-          >
-            <h1
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: 'clamp(52px, 8vw, 100px)',
-                fontWeight: 600,
-                color: '#EEE8D2',
-                letterSpacing: '0.04em',
-                marginBottom: '16px',
-              }}
-            >
-              Rooted
-            </h1>
-            <p
-              style={{
-                fontFamily: "'Sarabun', sans-serif",
-                fontWeight: 300,
-                fontSize: 'clamp(12px, 2vw, 16px)',
-                color: 'rgba(238,232,210,0.8)',
-                letterSpacing: '0.16em',
-                textTransform: 'uppercase',
-              }}
-            >
-              Different branches. One tree.
-            </p>
+            Rooted
+          </span>
+          <span className="text-[11px] tracking-[0.14em] uppercase text-[#8a7040]">
+            An Interactive Installation
+          </span>
+        </nav>
+
+        <section className="w-full">
+          <div className="w-full flex items-center justify-center">
+            <video autoPlay muted controls loop playsInline className="w-full object-cover max-h-[70vh]">
+              <source src="/AlvaradoCruzShalimar.mp4" type="video/mp4" />
+            </video>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="w-full max-w-2xl mx-auto px-6 py-20 text-center">
-        <p
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontStyle: 'italic',
-            fontSize: 'clamp(22px, 4vw, 34px)',
-            color: '#2d1f0a',
-            lineHeight: 1.75,
-          }}
-        >
-          "Without trees, we perish.
-          <br />
-          Without community, we are nothing."
-        </p>
-      </section>
+        <div className="w-full backdrop-blur-md max-w-2xl mx-auto px-6 pt-12 pb-6 flex flex-col gap-5">
 
-      <div className="w-16 mx-auto" style={{ borderTop: '1px solid #c9b580', marginBottom: '80px' }} />
-
-      <section className="w-full max-w-2xl mx-auto px-6 pb-24 text-center">
-        <h2
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: '32px',
-            fontWeight: 600,
-            color: '#603913',
-            marginBottom: '20px',
-          }}
-        >
-          Why Trees?
-        </h2>
-        <p
-          style={{
-            fontSize: '15px',
-            fontWeight: 300,
-            color: '#3a2e0e',
-            lineHeight: 2,
-          }}
-        >
-          There are an estimated 73,000 distinct tree species on Earth — nearly
-          10,000 still undiscovered. No matter the species, trees share the same
-          fundamental drive: to grow, to reach, and to connect. Neighboring trees
-          intertwine their roots beneath the soil, sharing nutrients and
-          strengthening one another silently, invisibly, without ask.
-          <br /><br />
-          We are not so different. Humanity has always grown stronger through
-          exchange — of culture, of knowledge, of story. Our diversities are not
-          divisions. They are branches of the same tree.
-        </p>
-      </section>
-
-      <div className="w-16 mx-auto" style={{ borderTop: '1px solid #c9b580', marginBottom: '80px' }} />
-
-      <section className="w-full max-w-3xl mx-auto px-6 pb-24">
-        <div
-          className="grid grid-cols-1 gap-16"
-          style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
-        >
-          <div>
-            <h2
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: '28px',
-                fontWeight: 600,
-                color: '#603913',
-                marginBottom: '16px',
-              }}
-            >
-              About the Work
-            </h2>
-            <p style={{ fontSize: '15px', fontWeight: 300, color: '#3a2e0e', lineHeight: 1.95 }}>
-              <em>Rooted</em> is a community-engaged interactive installation
-              built from hand-sculpted baroque-style trees, live electronics,
-              and a digital display system. Visitors are invited to respond to
-              a prompt — and their words become a leaf, carried through the
-              air and added to the collective canopy.
+          <Card className="">
+            <h2 className="text-[22px] text-center font-bold text-[#603913] mb-3">About the Artist</h2>
+            <p className="text-[16px] text-center font-bold text-[#3a2e0e] mb-2">
+              Shalimar Cruz Hebbeler
+            </p>
+            <p className="text-[15px] text-left text-[#3a2e0e] leading-loose">
+              Shalimar is a graduating masters student who likes to think of herself as an
+              imagineer. She combines art, technology, and engineering to create experiences
+              that leave a lasting impression. With roots in experimental events and a
+              belief that wonder should be accessible to everyone, she lives at the intersection
+              of creativity and craft.
               <br /><br />
-              Each response is anonymous, equal, and permanent for the duration
-              of the exhibition. No voice is louder than another. Every leaf
-              falls the same way.
+              When she is not building something, she is spoiling her cat April, strengthening
+              her community, or somewhere in the world learning about people and places and
+              confirming, every time, just how similar we all truly are no matter where we come from.
             </p>
-          </div>
+            <p className='text-center pt-4'>
+              <a href="https://www.linkedin.com/in/shalimarcruz" target="_blank" rel="noopener noreferrer" className="text-[13px] text-[#8a7040] italic underline underline-offset-2 hover:text-[#603913] transition-colors">LinkedIn</a>
+            </p>
+          </Card>
 
-          <div>
-            <h2
-              style={{
-                fontFamily: "'Cormorant Garamond', serif",
-                fontSize: '28px',
-                fontWeight: 600,
-                color: '#603913',
-                marginBottom: '16px',
-              }}
-            >
-              The Making
-            </h2>
-            <p style={{ fontSize: '15px', fontWeight: 300, color: '#3a2e0e', lineHeight: 1.95 }}>
-              The trees are sculpted by hand using pool noodles, drywall
-              compound, and plaster of Paris — techniques rooted in Baroque
-              stucco bas-relief. Their forms reference Organic Architecture
-              and Romantic Ruin: nature reclaiming built space.
+          <Card>
+            <h2 className="text-[22px] font-bold text-[#603913] mb-4">Why Trees?</h2>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose">
+              There are over 73,000 known tree species on Earth and nearly 10,000 still
+              undiscovered. Every one of them, regardless of species, does the same things.
+              They provide shade, shelter, clean air, protection, and nourishment. No tree holds
+              back from another. Neighboring trees intertwine their roots beneath the soil,
+              quietly sharing resources and strengthening each other. They do not sort by
+              species. They just grow together.
               <br /><br />
-              Beneath the surface, Arduino controls lighting and sensors detect presence. A custom
-              web application animates the leafs in real time, growing as the community gathers and contributes.
+              People work the same way. Every person, regardless of where they come from,
+              has the same fundamental needs. Communities grow stronger when people connect
+              and contribute to one another. Rooted was built on that parallel.
+            </p>
+          </Card>
+
+          <Card>
+            <h2 className="text-[22px] font-bold text-[#603913] mb-4">About the Work</h2>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose">
+              Rooted is an interactive cabinet built at a time when community feels more
+              fragile than ever. In a political climate that increasingly targets and divides
+              the people who make up our communities by origin, by identity, and by belief,
+              this project is a quiet act of resistance. A reminder that we are more alike
+              than we are different and that the connections between us matter.
+              <br /><br />
+              The cabinet invites you to contribute a single reflection. A value, a truth,
+              something you would teach someone. Your response appears as a leaf on a monitor
+              inside the cabinet, falling and settling alongside everyone else's.
+              <br /><br />
+              No name attached. No response ranked above another. Every leaf falls the same way.
+            </p>
+          </Card>
+
+          <Card>
+            <h2 className="text-[22px] font-bold text-[#603913] mb-4">The Making</h2>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose">
+              The cabinet was designed and built from scratch using 2x4 lumber framing and
+              plywood panels. Tree branch forms were sculpted over pool noodle armatures
+              using drywall compound and plaster of Paris, finished with primer and white
+              acrylic paint.
+              <br /><br />
+              An Arduino Mega drives mmWave radar sensors and DotStar LED strips. A
+              Raspberry Pi runs a custom Next.js web application that manages submissions
+              and displays leaves on a monitor in real time. NFC tags mounted on the
+              sculpture link directly to the submission portal with no app download required.
+            </p>
+            <Carousel images={[
+              '/img/cabinet.jpeg',
+              '/img/armature.jpeg',
+              '/img/doors.jpeg',
+              '/img/inside.jpeg',
+              '/img/fin.jpeg',
+            ]} />
+          </Card>
+
+          <Card>
+            <h2 className="text-[22px] font-bold text-[#603913] mb-4">The Process</h2>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose mb-6">
+              Rooted began with a question: what kinds of interactive experiences do people
+              actually want in a public space? A 19-respondent survey conducted at the
+              University of Colorado Boulder showed that tactile and interactive elements
+              ranked as the most appealing type of installation. A surprising number of
+              respondents also expressed a want for something calming and low pressure.
+              Both of those findings shaped this project directly.
+            </p>
+            <h3 className="text-[17px] font-bold text-[#603913] mb-3">The Research</h3>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose mb-6">
+              The survey explored public interest across installation types including digital,
+              physical, sound-based, and participatory formats. Respondents consistently ranked
+              hands-on interactivity highest, citing a desire to feel personally involved
+              rather than passively observed.
+              <br /><br />
+              Secondary research into tree biology, epigenetic memory in plants, and root
+              communication networks reinforced the core thesis. Trees are not just a visual
+              metaphor for community. They are a functioning model of it.
+            </p>
+            <h3 className="text-[17px] font-bold text-[#603913] mb-3">The Results</h3>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose">
+              Rooted was designed to be experienced, not explained. The prompts were
+              tested and refined to be open enough for anyone to answer regardless of
+              background, language, or familiarity with the space.
+              <br /><br />
+              The physical build, electronics, and web application were all developed and
+              iterated in parallel. The result is a piece where the sculptural and the
+              digital are inseparable. The tree is both the artwork and the interface.
+            </p>
+          </Card>
+
+          <Card>
+            <h2 className="text-[22px] font-bold text-[#603913] mb-2">Community Resources</h2>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose mb-6">
+              Rooted is about community and community means showing up for each other.
+              Here are real resources available to you and your neighbors in Colorado.
+              No barriers, no judgment. Just information.
+            </p>
+            <div className="flex flex-col gap-3">
+              <a href="https://www.aclu-co.org/know-your-rights" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
+                <span className="text-[15px] font-bold text-[#603913]">Know Your Rights</span>
+                <span className="text-[#8a7040]">→</span>
+              </a>
+              <a href="https://www.colorado.gov/pacific/cdhs/assistance-programs" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
+                <span className="text-[15px] font-bold text-[#603913]">CO Assistance Programs List</span>
+                <span className="text-[#8a7040]">→</span>
+              </a>
+              <a href="https://www.211colorado.org" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
+                <span className="text-[15px] font-bold text-[#603913]">2-1-1 Colorado</span>
+                <span className="text-[#8a7040]">→</span>
+              </a>
+              <a href="https://cdphe.colorado.gov/mental-health" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
+                <span className="text-[15px] font-bold text-[#603913]">Mental Health Resources</span>
+                <span className="text-[#8a7040]">→</span>
+              </a>
+              <a href="https://www.tpl.org/our-mission/community" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
+                <span className="text-[15px] font-bold text-[#603913]">Trust for Public Land</span>
+                <span className="text-[#8a7040]">→</span>
+              </a>
+            </div>
+          </Card>
+
+          <div className="flex flex-row justify-center items-center py-4">
+            <button
+              onClick={() => router.push('/')}
+              className="bg-[#3a5225] text-[#f0e8cc] rounded-lg px-7 py-[10px] text-[13px] tracking-[0.06em] font-bold cursor-pointer w-80"
+            >
+              Leave your leaf
+            </button>
+          </div>
+
+          <div className="w-full py-6 text-center border-t border-[#c9b580] text-[11px] text-[#8a7040] tracking-[0.1em]">
+            <p>
+              Rooted · ATLAS Institute · CU Boulder · 2026
             </p>
           </div>
         </div>
-      </section>
-
-      <section
-        className="w-full py-20 px-6"
-        style={{ background: 'rgba(96,57,19,0.06)', borderTop: '1px solid rgba(96,57,19,0.1)', borderBottom: '1px solid rgba(96,57,19,0.1)' }}
-      >
-        <div className="max-w-3xl mx-auto">
-          <h2
-            className="text-center"
-            style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: '28px',
-              fontWeight: 600,
-              color: '#603913',
-              marginBottom: '40px',
-            }}
-          >
-            What Trees Give Us
-          </h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-              gap: '24px',
-            }}
-          >
-            {[
-              { word: 'Shade', sub: 'rest' },
-              { word: 'Habitat', sub: 'home' },
-              { word: 'Purification', sub: 'cleansing' },
-              { word: 'Protection', sub: 'erosion prevention' },
-              { word: 'Resources', sub: 'sustenance' },
-              { word: 'Memory', sub: 'epigenetic learning' },
-              { word: 'Connection', sub: 'root intertwining' },
-              { word: 'Well-being', sub: 'stress reduction' },
-            ].map(item => (
-              <div
-                key={item.word}
-                style={{
-                  textAlign: 'center',
-                  padding: '20px 12px',
-                  border: '1px solid rgba(96,57,19,0.15)',
-                  borderRadius: '10px',
-                  background: 'rgba(238,232,210,0.7)',
-                }}
-              >
-                <p style={{
-                  fontFamily: "'Cormorant Garamond', serif",
-                  fontSize: '20px',
-                  fontWeight: 600,
-                  color: '#603913',
-                  marginBottom: '4px',
-                }}>
-                  {item.word}
-                </p>
-                <p style={{
-                  fontSize: '11px',
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                  color: '#8a7040',
-                  fontWeight: 300,
-                }}>
-                  {item.sub}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="w-full px-6 py-24 max-w-4xl mx-auto"
-        style={{
-          display: 'grid',
-          gap: '16px',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        }}
-      >
-        {[1, 2, 3].map(i => (
-          <div
-            key={i}
-            className="w-full rounded-xl flex items-center justify-center"
-            style={{
-              aspectRatio: '4/3',
-              background: 'rgba(96,57,19,0.07)',
-              border: '1px solid rgba(96,57,19,0.15)',
-              color: '#8a7040',
-              fontSize: '13px',
-              fontWeight: 300,
-              letterSpacing: '0.06em',
-            }}
-          >
-            Image {i}
-          </div>
-        ))}
-      </section>
-
-      <section
-        className="w-full py-20 text-center px-6"
-        style={{ borderTop: '1px solid rgba(96,57,19,0.15)' }}
-      >
-        <h2
-          style={{
-            fontFamily: "'Cormorant Garamond', serif",
-            fontSize: '28px',
-            fontWeight: 600,
-            color: '#603913',
-            marginBottom: '16px',
-          }}
-        >
-          About the Artist
-        </h2>
-        <p
-          style={{
-            fontSize: '15px',
-            fontWeight: 300,
-            color: '#3a2e0e',
-            lineHeight: 1.95,
-            maxWidth: '520px',
-            margin: '0 auto 12px',
-          }}
-        >
-          Shalimar Cruz Hebbeler
-        </p>
-        <p
-          style={{
-            fontSize: '13px',
-            fontWeight: 300,
-            color: '#8a7040',
-            lineHeight: 1.8,
-            maxWidth: '520px',
-            margin: '0 auto 36px',
-            letterSpacing: '0.04em',
-          }}
-        >
-          Masters Student · ATLAS Institute · University of Colorado Boulder
-        </p>
-
-        <button
-          onClick={() => router.push('/')}
-          style={{
-            fontFamily: "'Sarabun', sans-serif",
-            fontWeight: 700,
-            background: '#3a5225',
-            color: '#f0e8cc',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 28px',
-            fontSize: '13px',
-            letterSpacing: '0.06em',
-            cursor: 'pointer',
-          }}
-        >
-          ← Leave your leaf
-        </button>
-      </section>
-
-      <footer
-        className="w-full py-6 text-center"
-        style={{
-          borderTop: '1px solid rgba(96,57,19,0.12)',
-          fontSize: '11px',
-          color: '#8a7040',
-          fontWeight: 300,
-          letterSpacing: '0.1em',
-        }}
-      >
-        Rooted · ATLAS Institute · CU Boulder · 2026
-      </footer>
+      </div>
     </main>
   )
 }

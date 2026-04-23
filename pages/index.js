@@ -86,7 +86,7 @@ export default function LandingPage() {
         }}>
           <h1
             className="text-6xl font-semibold tracking-wide"
-            style={{ fontFamily: "'Cormorant Garamond', sans-serif", color: '#603913' }}
+            style={{ fontFamily: "'Sarabun', sans-serif", color: '#603913' }}
           >
             Rooted
           </h1>
