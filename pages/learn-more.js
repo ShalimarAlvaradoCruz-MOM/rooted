@@ -197,7 +197,7 @@ export default function LearnMore() {
           <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
             <iframe
               className="absolute inset-0 w-full h-full border-0 scale-[1.03]"
-              src="https://www.youtube.com/embed/YekloFXmZnI?autoplay=1&mute=1&loop=1&playlist=YekloFXmZnI"
+              ssrc="https://www.youtube.com/embed/YekloFXmZnI?autoplay=1&mute=1&loop=1&playlist=YekloFXmZnI&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1"
               title="Rooted"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
