@@ -193,11 +193,16 @@ export default function LearnMore() {
           </span>
         </nav>
 
-        <section className="w-full backdrop-blur-md">
-          <div className="w-full flex items-center justify-center">
-            <video autoPlay muted controls loop playsInline className="w-full object-cover max-h-[70vh]">
-              <source src="/AlvaradoCruzShalimar.mp4" type="video/mp4" />
-            </video>
+        <section className="w-full backdrop-blur-md overflow-hidden">
+          <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+            <iframe
+              className="absolute inset-0 w-full h-full border-0 scale-[1.03]"
+              src="https://www.youtube.com/embed/YekloFXmZnI?autoplay=1&mute=1&loop=1&playlist=YekloFXmZnI"
+              title="Rooted"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
           </div>
         </section>
 
