@@ -332,10 +332,10 @@ export default function LearnMore() {
                 <span className="text-[15px] font-bold text-[#603913]">2-1-1 Colorado</span>
                 <span className="text-[#8a7040]">→</span>
               </a>
-              <a href="https://cdphe.colorado.gov/mental-health" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
+              {/* <a href="https://cdphe.colorado.gov/mental-health" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
                 <span className="text-[15px] font-bold text-[#603913]">Mental Health Resources</span>
                 <span className="text-[#8a7040]">→</span>
-              </a>
+              </a> */}
               <a href="https://www.tpl.org/our-mission/community" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between px-4 py-3 rounded-lg border border-[#c9b580] bg-[#EEE8D2]/60 hover:bg-[#EEE8D2] transition-colors">
                 <span className="text-[15px] font-bold text-[#603913]">Trust for Public Land</span>
                 <span className="text-[#8a7040]">→</span>
