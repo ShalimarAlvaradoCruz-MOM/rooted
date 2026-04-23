@@ -225,7 +225,7 @@ export default function LearnMore() {
               confirming, every time, just how similar we all truly are no matter where we come from.
             </p>
             <p className='text-center pt-4'>
-              <a href="https://www.linkedin.com/in/shalimarcruz" target="_blank" rel="noopener noreferrer" className="text-[13px] text-[#8a7040] italic underline underline-offset-2 hover:text-[#603913] transition-colors">LinkedIn</a>
+              <a href="https://www.linkedin.com/in/shalimar-alvarado" target="_blank" rel="noopener noreferrer" className="text-[13px] text-[#8a7040] italic underline underline-offset-2 hover:text-[#603913] transition-colors">LinkedIn</a>
             </p>
           </Card>
 
