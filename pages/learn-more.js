@@ -230,22 +230,6 @@ export default function LearnMore() {
           </Card>
 
           <Card>
-            <h2 className="text-[22px] font-bold text-[#603913] mb-4">Why Trees?</h2>
-            <p className="text-[15px] text-[#3a2e0e] leading-loose">
-              There are over 73,000 known tree species on Earth and nearly 10,000 still
-              undiscovered. Every one of them, regardless of species, does the same things.
-              They provide shade, shelter, clean air, protection, and nourishment. No tree holds
-              back from another. Neighboring trees intertwine their roots beneath the soil,
-              quietly sharing resources and strengthening each other. They do not sort by
-              species. They just grow together.
-              <br /><br />
-              People work the same way. Every person, regardless of where they come from,
-              has the same fundamental needs. Communities grow stronger when people connect
-              and contribute to one another. Rooted was built on that parallel.
-            </p>
-          </Card>
-
-          <Card>
             <h2 className="text-[22px] font-bold text-[#603913] mb-4">About the Work</h2>
             <p className="text-[15px] text-[#3a2e0e] leading-loose">
               Rooted is an interactive cabinet built at a time when community feels more
@@ -259,6 +243,22 @@ export default function LearnMore() {
               inside the cabinet, falling and settling alongside everyone else's.
               <br /><br />
               No name attached. No response ranked above another. Every leaf falls the same way.
+            </p>
+          </Card>
+
+           <Card>
+            <h2 className="text-[22px] font-bold text-[#603913] mb-4">Why Trees?</h2>
+            <p className="text-[15px] text-[#3a2e0e] leading-loose">
+              There are over 73,000 known tree species on Earth and nearly 10,000 still
+              undiscovered. Every one of them, regardless of species, does the same things.
+              They provide shade, shelter, clean air, protection, and nourishment. No tree holds
+              back from another. Neighboring trees intertwine their roots beneath the soil,
+              quietly sharing resources and strengthening each other. They do not sort by
+              species. They just grow together.
+              <br /><br />
+              People work the same way. Every person, regardless of where they come from,
+              has the same fundamental needs. Communities grow stronger when people connect
+              and contribute to one another. Rooted was built on that parallel.
             </p>
           </Card>
 
