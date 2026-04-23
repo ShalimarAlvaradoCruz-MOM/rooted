@@ -193,7 +193,7 @@ export default function LearnMore() {
           </span>
         </nav>
 
-        <section className="w-full">
+        <section className="w-full backdrop-blur-md">
           <div className="w-full flex items-center justify-center">
             <video autoPlay muted controls loop playsInline className="w-full object-cover max-h-[70vh]">
               <source src="/AlvaradoCruzShalimar.mp4" type="video/mp4" />
