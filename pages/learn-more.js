@@ -230,7 +230,7 @@ export default function LearnMore() {
           </Card>
 
           <Card>
-            <h2 className="text-[22px] font-bold text-[#603913] mb-4">About the Work</h2>
+            <h2 className="text-[22px] text-center font-bold text-[#603913] mb-4">About the Work</h2>
             <p className="text-[15px] text-[#3a2e0e] leading-loose">
               Rooted is an interactive cabinet built at a time when community feels more
               fragile than ever. In a political climate that increasingly targets and divides
@@ -247,7 +247,7 @@ export default function LearnMore() {
           </Card>
 
            <Card>
-            <h2 className="text-[22px] font-bold text-[#603913] mb-4">Why Trees?</h2>
+            <h2 className="text-[22px] text-center font-bold text-[#603913] mb-4">Why Trees?</h2>
             <p className="text-[15px] text-[#3a2e0e] leading-loose">
               There are over 73,000 known tree species on Earth and nearly 10,000 still
               undiscovered. Every one of them, regardless of species, does the same things.
@@ -263,7 +263,7 @@ export default function LearnMore() {
           </Card>
 
           <Card>
-            <h2 className="text-[22px] font-bold text-[#603913] mb-4">The Making</h2>
+            <h2 className="text-[22px] text-center font-bold text-[#603913] mb-4">The Making</h2>
             <p className="text-[15px] text-[#3a2e0e] leading-loose">
               The cabinet was designed and built from scratch using 2x4 lumber framing and
               plywood panels. Tree branch forms were sculpted over pool noodle armatures
@@ -285,7 +285,7 @@ export default function LearnMore() {
           </Card>
 
           <Card>
-            <h2 className="text-[22px] font-bold text-[#603913] mb-4">The Process</h2>
+            <h2 className="text-[22px] text-center font-bold text-[#603913] mb-4">The Process</h2>
             <p className="text-[15px] text-[#3a2e0e] leading-loose mb-6">
               Rooted began with a question: what kinds of interactive experiences do people
               actually want in a public space? A 19-respondent survey conducted at the
@@ -318,7 +318,7 @@ export default function LearnMore() {
           </Card>
 
           <Card>
-            <h2 className="text-[22px] font-bold text-[#603913] mb-2">Community Resources</h2>
+            <h2 className="text-[22px] text-center font-bold text-[#603913] mb-2">Community Resources</h2>
             <p className="text-[15px] text-[#3a2e0e] leading-loose mb-6">
               Rooted is about community and community means showing up for each other.
               Here are real resources available to you and your neighbors in Colorado.
