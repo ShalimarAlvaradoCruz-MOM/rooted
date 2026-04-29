@@ -7,7 +7,6 @@ const LEAF_H = 334
 const STAGGER_MS = 12000
 const REPLAY_INTERVAL_MS = 30000
 
-// ── Falling Leaf ──────────────────────────────────────────────────────────────
 function FallingLeaf({ text, prompt, id, onDone }) {
   const leafRef = useRef(null)
   const promptCurveId = `curve_${id}`
@@ -34,21 +33,18 @@ function FallingLeaf({ text, prompt, id, onDone }) {
 
   const tl = gsap.timeline()
 
-  // Fade in
   tl.to(el, {
     opacity: 1,
     duration: 2,
     ease: 'power1.in',
   })
 
-  // Slow descent — falls all the way off the bottom
   tl.to(el, {
     y: vH + LEAF_H + 20,
     duration: 30 + Math.random() * 8,
     ease: 'none',
   }, 0)
 
-  // Horizontal sway
   tl.to(el, {
     x: startX + swayAmount,
     duration: swayDuration,
@@ -57,7 +53,6 @@ function FallingLeaf({ text, prompt, id, onDone }) {
     ease: 'sine.inOut',
   }, 0)
 
-  // Rotation sway — up to ±20deg, independent timing
   tl.to(el, {
     rotation: endRotation,
     duration: swayDuration * 0.7,
@@ -133,7 +128,6 @@ function FallingLeaf({ text, prompt, id, onDone }) {
   )
 }
 
-// ── Operator Panel ────────────────────────────────────────────────────────────
 function OperatorPanel({ onClose }) {
   const [entries, setEntries] = useState([])
   const [played, setPlayed] = useState([])
@@ -185,7 +179,6 @@ function OperatorPanel({ onClose }) {
       overflowY: 'auto',
     }}>
 
-      {/* Header */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -226,7 +219,6 @@ function OperatorPanel({ onClose }) {
         </button>
       </div>
 
-      {/* Stats row */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: '1fr 1fr 1fr',
@@ -251,14 +243,12 @@ function OperatorPanel({ onClose }) {
         ))}
       </div>
 
-      {/* Actions */}
       <div style={{ display: 'flex', gap: '10px', padding: '16px 28px', borderBottom: '1px solid rgba(210,185,88,0.12)' }}>
         <ActionBtn label="Clear pending" onClick={() => doDelete('queue', 'Pending queue')} color="#8b2020" disabled={loading} />
         <ActionBtn label="Clear history" onClick={() => doDelete('played', 'Play history')} color="#3a5225" disabled={loading} />
         <ActionBtn label="Clear all" onClick={() => doDelete('all', 'Everything')} color="#4a3010" disabled={loading} />
       </div>
 
-      {/* Pending queue */}
       <Section title="Pending" count={entries.length} accent="#D2B958">
         {entries.length === 0
           ? <EmptyState label="No leaves waiting" />
@@ -266,7 +256,6 @@ function OperatorPanel({ onClose }) {
         }
       </Section>
 
-      {/* Played history */}
       <Section title="Played" count={played.length} accent="#8bc34a">
         {played.length === 0
           ? <EmptyState label="Nothing played yet" />
@@ -274,7 +263,6 @@ function OperatorPanel({ onClose }) {
         }
       </Section>
 
-      {/* Toast */}
       {toast && (
         <div style={{
           position: 'fixed',
@@ -360,7 +348,6 @@ function EntryRow({ entry, dimmed }) {
   )
 }
 
-// ── Main display page ─────────────────────────────────────────────────────────
 export default function DisplayPage() {
   const [leaves, setLeaves] = useState([])
   const [fontReady, setFontReady] = useState(false)
@@ -368,7 +355,6 @@ export default function DisplayPage() {
   const spawnQueueRef = useRef([])
   const spawnTimerRef = useRef(null)
 
-  // Font loading
   useEffect(() => {
     if (typeof document === 'undefined') return
     const link = document.createElement('link')
@@ -382,7 +368,6 @@ export default function DisplayPage() {
     }
   }, [])
 
-  // Spawn next leaf from internal queue
   function scheduleNext(immediate = false) {
     if (spawnTimerRef.current) clearTimeout(spawnTimerRef.current)
     spawnTimerRef.current = setTimeout(async () => {
@@ -392,7 +377,6 @@ export default function DisplayPage() {
       }
       const entry = spawnQueueRef.current.shift()
 
-      // Tell server this entry has been played
       try {
         await fetch('/api/queue', {
           method: 'PATCH',
@@ -409,16 +393,21 @@ export default function DisplayPage() {
     }, immediate ? 600 : STAGGER_MS)
   }
 
-  // Poll server for new submissions
   useEffect(() => {
+    const seenIds = new Set()
+
     async function checkQueue() {
       try {
         const res = await fetch('/api/queue')
         const { pending } = await res.json()
         if (!pending?.length) return
 
-        const existingIds = new Set(spawnQueueRef.current.map(e => e.id))
-        const newEntries = pending.filter(e => !existingIds.has(e.id))
+        const newEntries = pending.filter(e =>
+          !seenIds.has(e.id) &&
+          !spawnQueueRef.current.find(s => s.id === e.id)
+        )
+        newEntries.forEach(e => seenIds.add(e.id))
+
         if (newEntries.length > 0) {
           spawnQueueRef.current.push(...newEntries)
           if (!spawnTimerRef.current) scheduleNext(true)
@@ -431,7 +420,6 @@ export default function DisplayPage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Periodic replay of played entries
   useEffect(() => {
     const t = setInterval(async () => {
       if (spawnQueueRef.current.length > 0) return
@@ -451,7 +439,6 @@ export default function DisplayPage() {
     setLeaves(prev => prev.filter(l => l.leafId !== leafId))
   }
 
-  // Secret 5-tap top-right corner to open operator panel
   const tapCountRef = useRef(0)
   const tapTimerRef = useRef(null)
   function handleCornerTap() {
@@ -469,7 +456,6 @@ export default function DisplayPage() {
       className="relative w-screen h-screen overflow-hidden"
       style={{ backgroundColor: '#ffffff' }}
     >
-      {/* Secret tap zone */}
       <div
         onClick={handleCornerTap}
         style={{ position: 'fixed', top: 0, right: 0, width: 60, height: 60, zIndex: 50 }}
